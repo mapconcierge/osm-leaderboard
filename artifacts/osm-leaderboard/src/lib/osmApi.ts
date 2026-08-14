@@ -2,6 +2,7 @@
 
 export interface Changeset {
   id: string;
+  uid: number | null; // numeric OSM user id, from the changeset's own `uid` attribute
   created_at: string;
   changes_count: number;
   min_lat?: number;
@@ -26,6 +27,8 @@ function parseChangesetPage(xmlText: string): Changeset[] {
 
   changesetElements.forEach(el => {
     const id = el.getAttribute("id") || "";
+    const uidAttr = el.getAttribute("uid");
+    const uid = uidAttr ? parseInt(uidAttr, 10) : null;
     const created_at = el.getAttribute("created_at") || "";
     const changes_count = parseInt(el.getAttribute("changes_count") || "0", 10);
 
@@ -49,7 +52,7 @@ function parseChangesetPage(xmlText: string): Changeset[] {
     });
 
     changesets.push({
-      id, created_at, changes_count, min_lat, min_lon, max_lat, max_lon, comment, hashtagsTag
+      id, uid, created_at, changes_count, min_lat, min_lon, max_lat, max_lon, comment, hashtagsTag
     });
   });
 
@@ -92,5 +95,38 @@ export async function fetchUserChangesets(username: string, sinceDate?: Date | n
   } catch (error) {
     console.error(`Error fetching changesets for ${username}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Resolve a username to its numeric OSM user id via a single-changeset fetch.
+ * Cheaper than paginating a user's full changeset history just to read `uid`
+ * off the first page. Returns null if the user has no changesets (or doesn't exist).
+ */
+export async function fetchUserId(username: string): Promise<number | null> {
+  const params = new URLSearchParams({ display_name: username, limit: "1" });
+  const response = await fetch(`https://api.openstreetmap.org/api/0.6/changesets?${params.toString()}`);
+  if (!response.ok) return null;
+  const [first] = parseChangesetPage(await response.text());
+  return first?.uid ?? null;
+}
+
+/**
+ * Exact, uncapped lifetime changeset count for a user, straight from the OSM
+ * user-details endpoint — no pagination needed (unlike fetchUserChangesets,
+ * which stops at MAX_CHANGESETS). CORS-enabled, no auth required for a public
+ * profile. Returns null on failure (network error, or a user who has opted
+ * their profile out of public visibility) so callers can fall back.
+ */
+export async function fetchUserTotalChangesetCount(uid: number): Promise<number | null> {
+  try {
+    const response = await fetch(`https://api.openstreetmap.org/api/0.6/user/${uid}.json`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const count = data?.user?.changesets?.count;
+    return typeof count === "number" ? count : null;
+  } catch (error) {
+    console.error(`Error fetching user details for uid ${uid}:`, error);
+    return null;
   }
 }

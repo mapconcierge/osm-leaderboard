@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchUsersConfig } from '@/lib/parseUsers';
-import { Changeset, fetchUserChangesets } from '@/lib/osmApi';
+import { Changeset, fetchUserChangesets, fetchUserId, fetchUserTotalChangesetCount } from '@/lib/osmApi';
 import { fetchBuildingWheelchairStats } from '@/lib/changesetDiff';
 import { fetchHdycCorrections, HdycCorrection } from '@/lib/hdycCorrections';
 import { getMapperLevelInfo, MapperLevelInfo } from '@/lib/mapperLevel';
@@ -96,14 +96,28 @@ export async function fetchUserStatsData(username: string, period: Period, confi
   let { buildingsAdded, wheelchairMapped } = await fetchBuildingWheelchairStats(allChangesets);
 
   // 3. Correction: for "All Time", our own changeset pagination is capped (see
-  // osmApi.ts) so very active mappers are undercounted. Where a saved HDYC
-  // snapshot exists for this user, use it as a floor — HDYC computes over the
-  // full OSM history with no such cap. Never applied to bounded periods
-  // (Daily/Weekly/Monthly/Yearly), where our own live data is already complete.
-  if (period === 'All Time' && hdycCorrection) {
-    totalChangesets = Math.max(totalChangesets, hdycCorrection.totalChangesets);
-    totalChanges = Math.max(totalChanges, hdycCorrection.totalChanges);
-    buildingsAdded = Math.max(buildingsAdded, hdycCorrection.buildingsCreated + hdycCorrection.buildingsModified);
+  // osmApi.ts) so very active mappers are undercounted. Never applied to bounded
+  // periods (Daily/Weekly/Monthly/Yearly), where our own live data is already complete.
+  if (period === 'All Time') {
+    // totalChangesets: prefer the exact, uncapped count straight from the OSM
+    // user-details endpoint (one cheap extra call, uid read off a changeset we
+    // already fetched) over the HDYC snapshot floor — it's always current,
+    // whereas HDYC snapshots are manually captured and go stale. Investigated
+    // ohsome API (GIScience/ohsome-api) as a general replacement for the HDYC
+    // correction; ruled out — it has no per-user contribution filter and requires
+    // a bounding box, so it can't answer "how many changesets has user X made,
+    // ever" at all. See 2026-08-15 maintenance notes.
+    const uid = allChangesets[0]?.uid ?? null;
+    const exactChangesetCount = uid !== null ? await fetchUserTotalChangesetCount(uid) : null;
+    totalChangesets = exactChangesetCount ?? (hdycCorrection ? Math.max(totalChangesets, hdycCorrection.totalChangesets) : totalChangesets);
+
+    // totalChanges/buildingsAdded have no equivalent free, uncapped, per-user
+    // API (ohsome included — same bbox-required limitation), so they keep
+    // relying on the manually-captured HDYC snapshot as a floor.
+    if (hdycCorrection) {
+      totalChanges = Math.max(totalChanges, hdycCorrection.totalChanges);
+      buildingsAdded = Math.max(buildingsAdded, hdycCorrection.buildingsCreated + hdycCorrection.buildingsModified);
+    }
   }
 
   const score = totalChanges + (buildingsAdded * SCORE_WEIGHTS.buildings) + (wheelchairMapped * SCORE_WEIGHTS.wheelchair) + (hashtagChangesets * SCORE_WEIGHTS.hashtag);
@@ -134,10 +148,19 @@ export function useUserStats(username: string, period: Period, configuredHashtag
 
 // HOT Tasking Manager mapper level (Beginner/Intermediate/Advanced) is based on
 // *lifetime* changeset count, independent of the leaderboard's period filter.
-// Deliberately lighter than fetchUserStatsData: it only paginates the changeset
-// list (same cap/HDYC-floor logic as "All Time") and skips the per-changeset
-// diff download that Buildings/Wheelchair need, since level only cares about count.
+// Uses the exact, uncapped count from the OSM user-details endpoint (one
+// single-changeset fetch to resolve uid, then one user lookup — far lighter
+// than fetchUserStatsData, which also downloads a diff per changeset for
+// Buildings/Wheelchair). Falls back to the old capped-pagination + HDYC-floor
+// approach only if that lookup fails (network error, or a user who opted their
+// profile out of public visibility).
 export async function fetchMapperLevelData(username: string, hdycCorrection?: HdycCorrection): Promise<MapperLevelInfo> {
+  const uid = await fetchUserId(username);
+  const exactCount = uid !== null ? await fetchUserTotalChangesetCount(uid) : null;
+  if (exactCount !== null) {
+    return getMapperLevelInfo(exactCount);
+  }
+
   const changesets = await fetchUserChangesets(username, null);
   let totalChangesets = changesets.length;
   if (hdycCorrection) {
