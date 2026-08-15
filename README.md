@@ -46,7 +46,7 @@ Daily/Weekly/Monthly/Yearly filters page back through a user's changeset history
 
 ### The "All Time" HDYC correction
 
-To compensate for that cap, `public/hdyc-corrections.json` stores per-user lifetime totals distilled from saved [hdyc.neis-one.org](https://hdyc.neis-one.org) ("How Did You Contribute") snapshots, which compute over a mapper's *entire* OSM history with no cap. HDYC has no public API, so a snapshot has to be captured manually per user (log in, search the user, "Save Page As" the rendered HTML — see `HDCY2OSMlogs/` and `pnpm --filter @workspace/scripts run extract-hdyc`) and re-captured periodically to stay current.
+To compensate for that cap, `public/hdyc-corrections.json` stores per-user lifetime totals distilled from saved [hdyc.neis-one.org](https://hdyc.neis-one.org) ("How Did You Contribute") snapshots, which compute over a mapper's *entire* OSM history with no cap. HDYC has no public API, so a snapshot has to be captured manually per user (log in, search the user, "Save Page As" the rendered HTML — see `pnpm --filter @workspace/scripts run extract-hdyc`) and re-captured periodically to stay current. The raw saved snapshots themselves are published in [`HDCY2OSMlogs/`](HDCY2OSMlogs/) for transparency — every number in `hdyc-corrections.json` is traceable to a specific saved HDYC page.
 
 For the **All Time** period only, the app takes `Math.max(liveValue, hdycValue)` — a *floor*, never an override, so a user who's kept mapping since their snapshot was taken still shows their fresher (higher) live numbers:
 

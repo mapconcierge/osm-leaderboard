@@ -49,7 +49,11 @@ Thumbs.db
 .local/
 
 # Raw personal HDYC (hdyc.neis-one.org) exports used to generate
-# artifacts/osm-leaderboard/public/hdyc-corrections.json — not source, and
-# large (each save includes a _files/ asset dump). See
-# scripts/src/extract-hdyc-corrections.ts.
-/HDCY2OSMlogs/
+# artifacts/osm-leaderboard/public/hdyc-corrections.json. The .html snapshots
+# themselves ARE tracked (published for transparency — every number in
+# hdyc-corrections.json is traceable to one of these saved pages). Only the
+# accompanying _files/ dumps stay ignored: each "Save Page As" also mirrors
+# that page's vendor assets (Leaflet, Chart.js, CSS, icons — ~0.5-1MB per
+# user, no data value, same handful of library files duplicated per user).
+# See scripts/src/extract-hdyc-corrections.ts.
+/HDCY2OSMlogs/*_files/

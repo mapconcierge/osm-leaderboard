@@ -44,7 +44,7 @@ A client-side OpenStreetMap contributor leaderboard that fetches real edit stats
 - `lib/db/` — Drizzle scaffold (empty schema; not used)
 - `lib/api-spec/openapi.yaml` — API contract source of truth (for the unused api-server)
 - `scripts/src/extract-hdyc-corrections.ts` — reads `HDCY2OSMlogs/*.html`, writes `artifacts/osm-leaderboard/public/hdyc-corrections.json`
-- `HDCY2OSMlogs/` — gitignored, local-only. Raw HDYC page saves (`HDYC2OpenStreetMap_<username>.html`, browser "Save Page As" from a logged-in session), one per user. Not source — only the JSON distilled from them is committed.
+- `HDCY2OSMlogs/` — raw HDYC page saves (`HDYC2OpenStreetMap_<username>.html`, browser "Save Page As" from a logged-in session), one per user. **As of 2026-08-15, the `.html` files themselves are tracked and committed** (published for transparency — every number in `hdyc-corrections.json` is traceable to one of these). Only the accompanying `<username>_files/` directories (mirrored vendor assets — Leaflet, Chart.js, CSS, icons; no data value) stay gitignored (`/HDCY2OSMlogs/*_files/`).
 
 ## Architecture decisions
 
