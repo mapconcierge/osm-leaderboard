@@ -9,7 +9,7 @@ import { cn, pad2, formatFileTimestamp } from '@/lib/utils';
 const MapPanel = lazy(() => import('@/components/MapPanel').then((m) => ({ default: m.MapPanel })));
 const GrowthChart = lazy(() => import('@/components/GrowthChart').then((m) => ({ default: m.GrowthChart })));
 
-const VERSION = 'v1.9.0';
+const VERSION = 'v1.9.1';
 
 // Dwell time per stop while touring: 3s matches MapPanel's flyTo duration,
 // plus ~2s to actually look at the marker before moving on.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T08:15:33.843Z",
+  "generatedAt": "2026-08-15T00:17:50.822Z",
   "source": "https://hdyc.neis-one.org",
   "users": {
     "MAPconcierge": {
@@ -17,6 +17,14 @@
       "totalChanges": 121293,
       "buildingsCreated": 589,
       "buildingsModified": 291
+    },
+    "furuhashilab": {
+      "asOf": "2026-08-14",
+      "since": "2018-06-02",
+      "totalChangesets": 161,
+      "totalChanges": 813,
+      "buildingsCreated": 67,
+      "buildingsModified": 34
     }
   }
 }
